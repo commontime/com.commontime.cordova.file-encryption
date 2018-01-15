@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
+  id="com.commontime.cordova.file-encryption"
+  version="0.0.1">
+
+  <name>Encryption of files</name>
+
+  <js-module src="www/fileencryption.js" name="FileEncryption">
+    <clobbers target="plugins.fileEncryption" />
+  </js-module>
+
+  <platform name="android">
+
+    <config-file target="config.xml" parent="/*">
+      <feature name="FileEncryption">
+        <param name="android-package" value="com.commontime.cordova.plugins.fileencryption.FileEncryption" />        
+      </feature>
+    </config-file>
+
+    <framework src="gradle/build-extras.gradle" custom="true" type="gradleReference" />
+    <framework src="library-projects/android/file-encryption" custom="true" />
+      
+  </platform>
+
+  <platform name="ios">
+
+    <config-file target="config.xml" parent="/*">
+        <feature name="FileEncryption">
+            <param name="ios-package" value="FileEncryption" />
+            <param name="onload" value="true" />
+        </feature>
+    </config-file>
+
+  </platform>
+    
+</plugin>

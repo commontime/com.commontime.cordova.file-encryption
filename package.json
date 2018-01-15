@@ -1,0 +1,25 @@
+{
+  "name": "com.commontime.cordova.file-encryption",
+  "version": "0.0.1",
+  "description": "Commontime cordova encryption plugin.",
+  "cordova": {
+    "id": "com.commontime.cordova.file-encryption",
+    "platforms": [
+      "android",
+      "ios"
+    ]
+  },
+  "keywords": [
+    "cordova",
+    "commontime",
+    "cordova-android"
+  ],
+  "engines": [
+    {
+      "name": "cordova",
+      "version": ">=3.0.0"
+    }
+  ],
+  "author": "Commontime Ltd",
+  "license": "MIT"
+}

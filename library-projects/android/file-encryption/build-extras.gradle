@@ -1,0 +1,23 @@
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    implementation('com.facebook.conceal:conceal:2.0.2@aar') {
+        transitive = true
+    }
+}
+
+android {
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+	    debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}

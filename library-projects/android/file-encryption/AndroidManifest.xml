@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.commontime.insomnialibrary">
+
+    <uses-sdk
+        android:minSdkVersion="14"
+        android:targetSdkVersion="25" />
+
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <application>
+        <service
+            android:name="com.commontime.cordova.plugins.insomnia.ForegroundService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <service
+            android:name="com.commontime.cordova.plugins.insomnia.RestarterService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name="com.commontime.cordova.plugins.insomnia.BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"></action>
+                <category android:name="android.intent.category.DEFAULT"></category>
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name="com.commontime.cordova.plugins.insomnia.BlankActivity">
+            <intent-filter>
+                <action android:name="com.commontime.cordova.plugins.insomnia.BlankActivity"></action>
+                <category android:name="android.intent.category.DEFAULT"></category>
+            </intent-filter>
+        </activity>
+		
+		<activity android:name="com.commontime.cordova.plugins.insomnia.LauncherActivity">
+            <intent-filter>
+                <action android:name="com.commontime.cordova.insomnia.BOOT" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>
