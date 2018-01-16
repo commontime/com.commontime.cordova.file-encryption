@@ -1,6 +1,8 @@
 package com.commontime.cordova.plugins.fileencryption;
 
 import android.net.Uri;
+import android.os.Build;
+import android.webkit.MimeTypeMap;
 
 import com.facebook.android.crypto.keychain.AndroidConceal;
 import com.facebook.android.crypto.keychain.SharedPrefsBackedKeyChain;
@@ -13,8 +15,10 @@ import com.facebook.crypto.keychain.KeyChain;
 import com.facebook.soloader.SoLoader;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.cordova.BuildConfig;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.CordovaPreferences;
 import org.apache.cordova.CordovaResourceApi;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -30,13 +34,25 @@ import java.io.OutputStream;
 public class FileEncryption extends CordovaPlugin {
 
     private static final String TAG = "FileEncryption";
-    private SharedPrefsBackedKeyChain keyChain;
+
+    private static final String ENCRYPTED_SUFFIX = ".encrypted";
+    private static final String ENCRYPT_ACTION = "encrypt";
+    private static final String ENTITY_ID = "entity_id";
+
+    private KeyChain keyChain;
     private Crypto crypto;
 
     @Override
     protected void pluginInitialize() {
         SoLoader.init(cordova.getActivity(), false);
-        keyChain = new SharedPrefsBackedKeyChain(cordova.getActivity(), CryptoConfig.KEY_256);
+
+        boolean useKeyChain = webView.getPreferences().getBoolean("usekeychain", false);
+        if( useKeyChain && android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            keyChain = new KeystoreBackedKeyChain(cordova.getActivity(), CryptoConfig.KEY_256);
+        } else {
+            keyChain = new SharedPrefsBackedKeyChain(cordova.getActivity(), CryptoConfig.KEY_256);
+        }
+
         crypto = AndroidConceal.get().createDefaultCrypto(keyChain);
     }
 
@@ -47,7 +63,7 @@ public class FileEncryption extends CordovaPlugin {
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-        if( action.equals("encrypt")) {
+        if( action.equals(ENCRYPT_ACTION)) {
             try {
                 encrypt( args.getString(0), callbackContext );
                 return true;
@@ -69,7 +85,7 @@ public class FileEncryption extends CordovaPlugin {
                     }
 
                     final File fileToEncrypt = webView.getResourceApi().mapUriToFile(Uri.parse(uri));
-                    final File encryptedFile = new File( fileToEncrypt.getParentFile(), fileToEncrypt.getName() + ".encrypted");
+                    final File encryptedFile = new File( fileToEncrypt.getParentFile(), fileToEncrypt.getName() + ENCRYPTED_SUFFIX);
 
                     FileInputStream fis = new FileInputStream(fileToEncrypt);
 
@@ -78,7 +94,7 @@ public class FileEncryption extends CordovaPlugin {
 
                     OutputStream outputStream = crypto.getCipherOutputStream(
                             fileStream,
-                            Entity.create("entity_id"));
+                            Entity.create(ENTITY_ID));
 
                     IOUtils.copy(fis, outputStream);
 
@@ -104,7 +120,11 @@ public class FileEncryption extends CordovaPlugin {
     @Override
     public Uri remapUri(Uri uri) {
 
-        if( uri.toString().toLowerCase().contains(".encrypted") ) {
+        if( uri.toString().toLowerCase().endsWith(ENCRYPTED_SUFFIX) ) {
+            return toPluginUri(uri);
+        }
+
+        if( uri.toString().toLowerCase().endsWith(ENCRYPTED_SUFFIX) ) {
             return toPluginUri(uri);
         }
 
@@ -112,16 +132,23 @@ public class FileEncryption extends CordovaPlugin {
     }
 
     @Override
-    public CordovaResourceApi.OpenForReadResult handleOpenForRead(Uri uri) throws IOException {
+    public CordovaResourceApi.OpenForReadResult handleOpenForRead(final Uri uri) throws IOException {
         Uri origUri = fromPluginUri(uri);
 
+        String mimeType = "image/jpeg";
+        final String url = origUri.toString().substring(0, origUri.toString().length() - ENCRYPTED_SUFFIX.length() );
+        final String ext = MimeTypeMap.getFileExtensionFromUrl(url);
+        if(ext != null) {
+            mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
+        }
+
         final File fileToDecrypt = webView.getResourceApi().mapUriToFile(origUri);
-        FileInputStream fis = new FileInputStream(fileToDecrypt);
+        final FileInputStream fis = new FileInputStream(fileToDecrypt);
 
         InputStream inputStream = null;
         try {
-            inputStream = crypto.getCipherInputStream( fis, Entity.create("entity_id"));
-            return new CordovaResourceApi.OpenForReadResult(origUri, inputStream, "image/jpeg", 0, null );
+            inputStream = crypto.getCipherInputStream( fis, Entity.create(ENTITY_ID));
+            return new CordovaResourceApi.OpenForReadResult(origUri, inputStream, mimeType, 0, null );
         } catch (CryptoInitializationException e) {
             e.printStackTrace();
             throw new IOException(e);

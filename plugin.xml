@@ -13,6 +13,7 @@
 
     <config-file target="config.xml" parent="/*">
       <feature name="FileEncryption">
+        <param name="onload" value="true" />
         <param name="android-package" value="com.commontime.cordova.plugins.fileencryption.FileEncryption" />        
       </feature>
     </config-file>
