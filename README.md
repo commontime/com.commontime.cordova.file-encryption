@@ -1,10 +1,12 @@
 # com.commontime.cordova.file-encryption
 
+# Encrypting:
+
 ```
 plugins.fileEncryption.encrypt( successCallback, failCallback, urlToEncryptedFile );
 ```
 
-# Encrypting:
+For example:
 
 ```
 plugins.fileEncryption.encrypt( function(x) {
