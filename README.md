@@ -52,5 +52,5 @@ Decrypting is also done automatically when a file is requested that ends with ".
 
 # Android preferences:
 
-Apply the preference "usekeychain" to make the plugin generate and store the key in the KeyStore.  Otherwise the key is stored unencrypted in Shared Prefs.
+Apply the cordova preference "usekeystore" = true to make the plugin generate and store the key in the KeyStore.  Otherwise the key is stored unencrypted in Shared Prefs.
 

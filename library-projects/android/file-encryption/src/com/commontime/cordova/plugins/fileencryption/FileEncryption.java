@@ -39,6 +39,7 @@ public class FileEncryption extends CordovaPlugin {
     private static final String ENCRYPT_ACTION = "encrypt";
     private static final String ENTITY_ID = "entity_id";
     private static final String DECRYPT_ACTION = "decrypt";
+    private static final String USE_KEYSTORE = "usekeystore";
 
     private KeyChain keyChain;
     private Crypto crypto;
@@ -47,7 +48,7 @@ public class FileEncryption extends CordovaPlugin {
     protected void pluginInitialize() {
         SoLoader.init(cordova.getActivity(), false);
 
-        boolean useKeyChain = webView.getPreferences().getBoolean("usekeychain", false);
+        boolean useKeyChain = webView.getPreferences().getBoolean(USE_KEYSTORE, false);
         if( useKeyChain && android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             keyChain = new KeystoreBackedKeyChain(cordova.getActivity(), CryptoConfig.KEY_256);
         } else {
