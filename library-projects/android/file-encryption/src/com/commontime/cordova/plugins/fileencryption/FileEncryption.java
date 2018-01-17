@@ -15,10 +15,8 @@ import com.facebook.crypto.keychain.KeyChain;
 import com.facebook.soloader.SoLoader;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.cordova.BuildConfig;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.CordovaPreferences;
 import org.apache.cordova.CordovaResourceApi;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -179,10 +177,6 @@ public class FileEncryption extends CordovaPlugin {
 
     @Override
     public Uri remapUri(Uri uri) {
-
-        if( uri.toString().toLowerCase().endsWith(ENCRYPTED_SUFFIX) ) {
-            return toPluginUri(uri);
-        }
 
         if( uri.toString().toLowerCase().endsWith(ENCRYPTED_SUFFIX) ) {
             return toPluginUri(uri);
