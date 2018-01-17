@@ -98,16 +98,17 @@ public class FileEncryption extends CordovaPlugin {
                     final String name = parsed.getLastPathSegment();
                     final String decryptedName = name.substring(0, name.length() - ENCRYPTED_SUFFIX.length() );
 
-                    FileInputStream fis = new FileInputStream(fileToDecrypt);
+                    FileInputStream fileStream = new FileInputStream(fileToDecrypt);
 
-                    InputStream inputStream = null;
-                    inputStream = crypto.getCipherInputStream( fis, Entity.create(ENTITY_ID));
+                    InputStream fis = null;
+                    fis = crypto.getCipherInputStream( fileStream, Entity.create(ENTITY_ID));
 
                     final File decryptedFile = new File(fileToDecrypt.getParent(), decryptedName);
                     OutputStream fos = new BufferedOutputStream(new FileOutputStream(decryptedFile));
 
-                    IOUtils.copy(inputStream, fos);
+                    IOUtils.copy(fis, fos);
 
+                    fileStream.close();
                     fis.close();
                     fos.close();
 
@@ -156,6 +157,7 @@ public class FileEncryption extends CordovaPlugin {
 
                     fis.close();
                     fos.close();
+                    fileStream.close();
 
                     fileToEncrypt.delete();
 
