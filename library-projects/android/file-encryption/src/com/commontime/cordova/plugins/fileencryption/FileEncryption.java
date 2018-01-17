@@ -38,6 +38,7 @@ public class FileEncryption extends CordovaPlugin {
     private static final String ENCRYPTED_SUFFIX = ".encrypted";
     private static final String ENCRYPT_ACTION = "encrypt";
     private static final String ENTITY_ID = "entity_id";
+    private static final String DECRYPT_ACTION = "decrypt";
 
     private KeyChain keyChain;
     private Crypto crypto;
@@ -66,13 +67,68 @@ public class FileEncryption extends CordovaPlugin {
         if( action.equals(ENCRYPT_ACTION)) {
             try {
                 encrypt( args.getString(0), callbackContext );
-                return true;
             } catch (Exception e) {
-
+                callbackContext.error(e.getMessage());
             }
+            return true;
+        }
+        if( action.equals(DECRYPT_ACTION)) {
+            try {
+                decrypt( args.getString(0), callbackContext );
+            } catch (Exception e) {
+                callbackContext.error(e.getMessage());
+            }
+            return true;
         }
 
         return false;
+    }
+
+    private void decrypt(final String uri, final CallbackContext callbackContext) {
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (!crypto.isAvailable()) {
+                        callbackContext.error("Crypto library not available");
+                        return;
+                    }
+
+                    final Uri parsed = Uri.parse(uri);
+                    final File fileToDecrypt = webView.getResourceApi().mapUriToFile(parsed);
+                    final String name = parsed.getLastPathSegment();
+                    final String decryptedName = name.substring(0, name.length() - ENCRYPTED_SUFFIX.length() );
+
+                    FileInputStream fis = new FileInputStream(fileToDecrypt);
+
+                    InputStream inputStream = null;
+                    inputStream = crypto.getCipherInputStream( fis, Entity.create(ENTITY_ID));
+
+                    final File decryptedFile = new File(fileToDecrypt.getParent(), decryptedName);
+                    OutputStream fos = new BufferedOutputStream(new FileOutputStream(decryptedFile));
+
+                    IOUtils.copy(inputStream, fos);
+
+                    fis.close();
+                    fos.close();
+
+                    fileToDecrypt.delete();
+
+                    callbackContext.success(decryptedFile.toURI().toString());
+                    return;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    callbackContext.error(e.getMessage());
+                } catch (CryptoInitializationException e) {
+                    e.printStackTrace();
+                    callbackContext.error(e.getMessage());
+                } catch (KeyChainException e) {
+                    e.printStackTrace();
+                    callbackContext.error(e.getMessage());
+                }
+                return;
+            }
+        });
     }
 
     private void encrypt(final String uri, final CallbackContext callbackContext) {
@@ -82,6 +138,7 @@ public class FileEncryption extends CordovaPlugin {
                 try {
                     if (!crypto.isAvailable()) {
                         callbackContext.error("Crypto library not available");
+                        return;
                     }
 
                     final File fileToEncrypt = webView.getResourceApi().mapUriToFile(Uri.parse(uri));
@@ -92,14 +149,16 @@ public class FileEncryption extends CordovaPlugin {
                     OutputStream fileStream = new BufferedOutputStream(
                             new FileOutputStream(encryptedFile));
 
-                    OutputStream outputStream = crypto.getCipherOutputStream(
+                    OutputStream fos = crypto.getCipherOutputStream(
                             fileStream,
                             Entity.create(ENTITY_ID));
 
-                    IOUtils.copy(fis, outputStream);
+                    IOUtils.copy(fis, fos);
 
                     fis.close();
-                    outputStream.close();
+                    fos.close();
+
+                    fileToEncrypt.delete();
 
                     callbackContext.success(encryptedFile.toURI().toString());
                     return;
