@@ -1,7 +1,7 @@
 #import <Cordova/CDVPlugin.h>
 #import <MobileCoreServices/MobileCoreServices.h>
-#import "RNEncryptor.h"
 #import "RNDecryptor.h"
+#import "RNEncryptor.h"
 
 @interface FileEncryption : CDVPlugin
 
