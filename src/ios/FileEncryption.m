@@ -2,6 +2,7 @@
 
 static NSString *ENCRYPTED_IDENTIFIER = @".encrypted";
 static NSString *SERVICE_NAME = @"com.mycompany.myAppServiceName";
+static NSString *KEYCHAIN_PASSWORD_KEY = @"encrytionPassword";
 
 static NSString *encryptionPassword;
 
@@ -44,26 +45,18 @@ static NSString* CTHexStringFromBytes(const uint8_t* bytes, size_t length) {
 
 static NSMutableDictionary* newSearchDictionary(NSString* identifier) {
     NSMutableDictionary *searchDictionary = [[NSMutableDictionary alloc] init];
-    
     [searchDictionary setObject:(id)kSecClassGenericPassword forKey:(id)kSecClass];
-    
     NSData *encodedIdentifier = [identifier dataUsingEncoding:NSUTF8StringEncoding];
     [searchDictionary setObject:encodedIdentifier forKey:(id)kSecAttrGeneric];
     [searchDictionary setObject:encodedIdentifier forKey:(id)kSecAttrAccount];
     [searchDictionary setObject:SERVICE_NAME forKey:(id)kSecAttrService];
-    
     return searchDictionary;
 }
 
 static NSData* searchKeychainCopyMatching(NSString* identifier) {
     NSMutableDictionary *searchDictionary = newSearchDictionary(identifier);
-    
-    // Add search attributes
     [searchDictionary setObject:(id)kSecMatchLimitOne forKey:(id)kSecMatchLimit];
-    
-    // Add search return types
     [searchDictionary setObject:(id)kCFBooleanTrue forKey:(id)kSecReturnData];
-    
     NSData *result = nil;
     SecItemCopyMatching((CFDictionaryRef)searchDictionary, (CFTypeRef)&result);
     return result;
@@ -71,12 +64,9 @@ static NSData* searchKeychainCopyMatching(NSString* identifier) {
 
 static BOOL createKeychainValue(NSString* password, NSString* identifier) {
     NSMutableDictionary *dictionary = newSearchDictionary(identifier);
-    
     NSData *passwordData = [password dataUsingEncoding:NSUTF8StringEncoding];
     [dictionary setObject:passwordData forKey:(id)kSecValueData];
-    
     OSStatus status = SecItemAdd((CFDictionaryRef)dictionary, NULL);
-    
     if (status == errSecSuccess) {
         return YES;
     }
@@ -89,7 +79,7 @@ static BOOL createKeychainValue(NSString* password, NSString* identifier) {
 {
     [NSURLProtocol registerClass:[UrlRemapURLProtocol class]];
     
-    NSData* storedPassword = searchKeychainCopyMatching(@"encrytionPassword");
+    NSData* storedPassword = searchKeychainCopyMatching(KEYCHAIN_PASSWORD_KEY);
     
     if (storedPassword == nil)
     {
@@ -101,7 +91,7 @@ static BOOL createKeychainValue(NSString* password, NSString* identifier) {
         
         if (result == 0) {
             encryptionPassword = CTHexStringFromBytes(buffer, numBytes);
-            createKeychainValue(encryptionPassword, @"encrytionPassword");
+            createKeychainValue(encryptionPassword, KEYCHAIN_PASSWORD_KEY);
         }
     } else {
         NSString* newStr = [[NSString alloc] initWithData:storedPassword encoding:NSUTF8StringEncoding];
