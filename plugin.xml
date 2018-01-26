@@ -34,16 +34,8 @@
 
     <header-file src="src/ios/FileEncryption.h" target-dir="FileEncryption"/>
     <source-file src="src/ios/FileEncryption.m" target-dir="FileEncryption"/>
-    <header-file src="src/ios/RNCryptor/RNCryptor+Private.h" />
-    <header-file src="src/ios/RNCryptor/RNCryptor-Prefix.pch" />
-    <header-file src="src/ios/RNCryptor/RNCryptor.h" />
-    <source-file src="src/ios/RNCryptor/RNCryptor.m" />
-    <header-file src="src/ios/RNCryptor/RNCryptorEngine.h" />
-    <source-file src="src/ios/RNCryptor/RNCryptorEngine.m" />
-    <header-file src="src/ios/RNCryptor/RNDecryptor.h" />
-    <source-file src="src/ios/RNCryptor/RNDecryptor.m" />
-    <header-file src="src/ios/RNCryptor/RNEncryptor.h" />
-    <source-file src="src/ios/RNCryptor/RNEncryptor.m" />
+
+    <framework src="Security.framework"/>
 
   </platform>
     
