@@ -1,7 +1,7 @@
 #import "FileEncryption.h"
 
 static NSString *ENCRYPTED_IDENTIFIER = @".encrypted";
-static NSString *SERVICE_NAME = @"com.mycompany.myAppServiceName";
+static NSString *SERVICE_NAME = @"com.commontime.encryptionService";
 static NSString *KEYCHAIN_PASSWORD_KEY = @"encrytionPassword";
 
 static NSString *encryptionPassword;
