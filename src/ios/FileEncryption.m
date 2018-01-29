@@ -8,6 +8,7 @@ static NSString *encryptionPassword;
 
 static NSString *mimeTypeForPath(NSString* path) {
     if(path) {
+        path = [path stringByReplacingOccurrencesOfString:ENCRYPTED_IDENTIFIER withString:@""];
         NSString *ret = nil;
         CFStringRef pathExtension = (__bridge_retained CFStringRef)[path pathExtension];
         CFStringRef type = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, pathExtension, NULL);
@@ -103,14 +104,26 @@ static BOOL createKeychainValue(NSString* password, NSString* identifier) {
 {
     CDVPluginResult *pluginResult = nil;
     
-    NSString *path = [self crypto:@"encrypt" command:command];
+    NSString *filePath = [command.arguments objectAtIndex:0];
     
-    if (path != nil) {
+    NSString *mimeType = mimeTypeForPath(filePath);
+    
+    if ([mimeType isEqualToString:@"image/jpeg"] || [mimeType isEqualToString:@"image/jpg"] || [mimeType isEqualToString:@"image/png"])
+    {
+        NSString *path = [self crypto:@"encrypt" command:command];
+        
+        if (path != nil) {
+            pluginResult =
+            [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                              messageAsString:path];
+        } else {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
+        }
+    }
+    else {
         pluginResult =
         [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                          messageAsString:path];
-    } else {
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
+                          messageAsString:filePath];
     }
     
     [self.commandDelegate sendPluginResult:pluginResult
@@ -121,14 +134,27 @@ static BOOL createKeychainValue(NSString* password, NSString* identifier) {
     
     CDVPluginResult *pluginResult = nil;
     
-    NSString *path = [self crypto:@"decrypt" command:command];
+    NSString *filePath = [command.arguments objectAtIndex:0];
     
-    if (path != nil) {
+    NSString *mimeType = mimeTypeForPath(filePath);
+    
+    if ([mimeType isEqualToString:@"image/jpeg"] || [mimeType isEqualToString:@"image/jpg"] || [mimeType isEqualToString:@"image/png"])
+    {
+        NSString *path = [self crypto:@"decrypt" command:command];
+        
+        if (path != nil) {
+            pluginResult =
+            [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
+                              messageAsString:path];
+        } else {
+            pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
+        }
+    }
+    else
+    {
         pluginResult =
         [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                          messageAsString:path];
-    } else {
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
+                          messageAsString:filePath];
     }
     
     [self.commandDelegate sendPluginResult:pluginResult
@@ -197,10 +223,11 @@ static BOOL createKeychainValue(NSString* password, NSString* identifier) {
     NSString *url = request.URL.absoluteString;
     NSString *fileName = url.lastPathComponent;
     NSString *scheme = request.URL.scheme;
+    NSString *mimeType = mimeTypeForPath(url);
     if ([scheme isEqualToString:@"file"] == NO) {
         return NO;
     }
-    if ([fileName containsString:ENCRYPTED_IDENTIFIER]) {
+    if ([fileName containsString:ENCRYPTED_IDENTIFIER] && ([mimeType isEqualToString:@"image/jpeg"] || [mimeType isEqualToString:@"image/jpg"] || [mimeType isEqualToString:@"image/png"])) {
         return YES;
     }
     return NO;
