@@ -32,11 +32,8 @@
         </feature>
     </config-file>
 
-    <config-file target="*/Entitlements-Debug.plist" parent="com.apple.developer.default-data-protection">        
-      <string>NSFileProtectionComplete</string>
-    </config-file>
-    <config-file target="*/Entitlements-Release.plist" parent="com.apple.developer.default-data-protection">        
-      <string>NSFileProtectionComplete</string>
+    <config-file target="*.entitlements" parent="om.apple.developer.default-data-protection">
+        <string>NSFileProtectionCompleteUnlessOpen</string>
     </config-file>
 
     <header-file src="src/ios/FileEncryption.h" target-dir="FileEncryption"/>
