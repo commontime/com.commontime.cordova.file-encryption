@@ -32,7 +32,7 @@
         </feature>
     </config-file>
 
-    <config-file target="*.entitlements" parent="om.apple.developer.default-data-protection">
+    <config-file target="*.entitlements" parent="com.apple.developer.default-data-protection">
         <string>NSFileProtectionCompleteUnlessOpen</string>
     </config-file>
 
