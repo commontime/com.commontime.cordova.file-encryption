@@ -5,6 +5,9 @@ module.exports = {
     },
     decrypt: function (successCallback, errorCallback, path) {
         cordova.exec(successCallback, errorCallback, 'FileEncryption', 'decrypt', [path]);
+    },
+    viewEncryptedImage: function (successCallback, errorCallback, path) {
+        cordova.exec(successCallback, errorCallback, 'FileEncryption', 'decrypt', [path]);
     }
 }
 

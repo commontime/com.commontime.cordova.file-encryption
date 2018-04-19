@@ -1,5 +1,6 @@
 package com.commontime.cordova.plugins.fileencryption;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.webkit.MimeTypeMap;
@@ -37,10 +38,11 @@ public class FileEncryption extends CordovaPlugin {
     private static final String ENCRYPT_ACTION = "encrypt";
     private static final String ENTITY_ID = "entity_id";
     private static final String DECRYPT_ACTION = "decrypt";
+    private static final String VIEW_ENCRYPTED_IMAGE_ACTION = "viewEncryptedImage";
     private static final String USE_KEYSTORE = "usekeystore";
 
     private KeyChain keyChain;
-    private Crypto crypto;
+    private static Crypto crypto;
 
     @Override
     protected void pluginInitialize() {
@@ -74,6 +76,14 @@ public class FileEncryption extends CordovaPlugin {
         if( action.equals(DECRYPT_ACTION)) {
             try {
                 decrypt( args.getString(0), callbackContext );
+            } catch (Exception e) {
+                callbackContext.error(e.getMessage());
+            }
+            return true;
+        }
+        if( action.equals(VIEW_ENCRYPTED_IMAGE_ACTION)) {
+            try {
+                viewEncryptedImage( args.getString(0), callbackContext );
             } catch (Exception e) {
                 callbackContext.error(e.getMessage());
             }
@@ -177,6 +187,13 @@ public class FileEncryption extends CordovaPlugin {
         });
     }
 
+    private void viewEncryptedImage(final String uri, final CallbackContext callbackContext)
+    {
+        Intent i = new Intent(cordova.getActivity(), EncryptedImageViewerActivity.class);
+        i.putExtra("path", uri);
+        cordova.getActivity().startActivity(i);
+    }
+
     @Override
     public Uri remapUri(Uri uri) {
 
@@ -212,5 +229,23 @@ public class FileEncryption extends CordovaPlugin {
             e.printStackTrace();
             throw new IOException(e);
         }
+    }
+
+    public void decrypt(final String path, final DecryptCallback callback) {
+        try {
+            final Uri uri = Uri.parse(path);
+            final File fileToDecrypt = new File(uri.getPath());
+            final FileInputStream fis = new FileInputStream(fileToDecrypt);
+            InputStream inputStream = crypto.getCipherInputStream( fis, Entity.create(ENTITY_ID));
+            callback.onSuccess(inputStream);
+        } catch (Exception e) {
+            e.printStackTrace();
+            callback.onFailure();
+        }
+    }
+
+    public interface DecryptCallback {
+        public void onSuccess(InputStream is);
+        public void onFailure();
     }
 }
