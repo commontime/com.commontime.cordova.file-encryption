@@ -33,6 +33,8 @@ import java.io.InputStream;
 
 public class EncryptedImageViewerActivity extends Activity
 {
+    Bitmap bmp = null;
+
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
@@ -44,17 +46,37 @@ public class EncryptedImageViewerActivity extends Activity
         actionBar.setStackedBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         actionBar.setDisplayHomeAsUpEnabled(true);
 
-        String path = getIntent().getStringExtra("path");
-        FileEncryption fe = new FileEncryption();
+        final String path = getIntent().getStringExtra("path");
+        final FileEncryption fe = new FileEncryption();
         fe.decrypt(path, new FileEncryption.DecryptCallback() {
             @Override
             public void onSuccess(InputStream is) {
                 if(is != null) {
-                    Bitmap bmp = BitmapFactory.decodeStream(is);
-                    ZoomFunctionality img = new ZoomFunctionality(EncryptedImageViewerActivity.this);
-                    img.setImageBitmap(bmp);
-                    img.setMaxZoom(4f);
-                    setContentView(img);
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inJustDecodeBounds = true;
+                    BitmapFactory.decodeStream(is, null, options);
+                    final int inSampleSize = calculateInSampleSize(options, 1500, 1500);
+                    fe.decrypt(path, new FileEncryption.DecryptCallback() {
+                        @Override
+                        public void onSuccess(InputStream is) {
+                            if(is != null) {
+                                BitmapFactory.Options options = new BitmapFactory.Options();
+                                options.inJustDecodeBounds = false;
+                                options.inSampleSize = inSampleSize;
+                                bmp = BitmapFactory.decodeStream(is, null, options);
+                                ZoomFunctionality img = new ZoomFunctionality(EncryptedImageViewerActivity.this);
+                                img.setImageBitmap(bmp);
+                                img.setMaxZoom(4f);
+                                setContentView(img);
+                            } else {
+                                finish();
+                            }
+                        }
+                        @Override
+                        public void onFailure() {
+                            finish();
+                        }
+                    });
                 } else {
                     finish();
                 }
@@ -75,5 +97,35 @@ public class EncryptedImageViewerActivity extends Activity
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (bmp != null)
+            bmp .recycle();
+        super.onDestroy();
+    }
+
+    public int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight)
+    {
+        // Raw height and width of image
+        final int height = options.outHeight;
+        final int width = options.outWidth;
+        int inSampleSize = 1;
+
+        if (height > reqHeight || width > reqWidth) {
+
+            final int halfHeight = height / 2;
+            final int halfWidth = width / 2;
+
+            // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+            // height and width larger than the requested height and width.
+            while ((halfHeight / inSampleSize) >= reqHeight
+                    && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2;
+            }
+        }
+
+        return inSampleSize;
     }
 }
