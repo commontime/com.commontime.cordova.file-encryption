@@ -1,9 +1,17 @@
 #import "FileEncryption.h"
 
+NSString* const ENCRYPT_FILE_MESSAGE_ID = @"ENCRYPT_FILE";
+
 @implementation FileEncryption
 
 - (void) pluginInitialize
 {
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(encryptFileNotification:) name:ENCRYPT_FILE_MESSAGE_ID object:nil];
+}
+
+- (void)encryptFileNotification:(NSNotification *)notification
+{
+    [self encrypt:notification.object];
 }
 
 - (void)encrypt:(CDVInvokedUrlCommand*)command

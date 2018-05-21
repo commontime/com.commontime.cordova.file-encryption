@@ -21,6 +21,7 @@ import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaResourceApi;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -41,6 +42,10 @@ public class FileEncryption extends CordovaPlugin {
     private static final String VIEW_ENCRYPTED_IMAGE_ACTION = "viewEncryptedImage";
     private static final String USE_KEYSTORE = "usekeystore";
 
+    private static final String ENCRYPT_FILE_MESSAGE_ID = "ENCRYPT_FILE";
+    private static final String ENCRYPT_FILE_URI_KEY = "uri";
+    private static final String ENCRYPT_FILE_CALLBACK_KEY = "cb";
+
     private KeyChain keyChain;
     private static Crypto crypto;
 
@@ -49,7 +54,7 @@ public class FileEncryption extends CordovaPlugin {
         SoLoader.init(cordova.getActivity(), false);
 
         boolean useKeyChain = webView.getPreferences().getBoolean(USE_KEYSTORE, false);
-        if( useKeyChain && android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (useKeyChain && android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             keyChain = new KeystoreBackedKeyChain(cordova.getActivity(), CryptoConfig.KEY_256);
         } else {
             keyChain = new SharedPrefsBackedKeyChain(cordova.getActivity(), CryptoConfig.KEY_256);
@@ -59,31 +64,44 @@ public class FileEncryption extends CordovaPlugin {
     }
 
     @Override
+    public Object onMessage(String id, Object data) {
+        if (id.equals(ENCRYPT_FILE_MESSAGE_ID)) {
+            try {
+                JSONObject dataJson = (JSONObject)data;
+                encrypt(dataJson.getString(ENCRYPT_FILE_URI_KEY), (CallbackContext)dataJson.get(ENCRYPT_FILE_CALLBACK_KEY));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return super.onMessage(id, data);
+    }
+
+    @Override
     public void onDestroy() {
         super.onDestroy();
     }
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-        if( action.equals(ENCRYPT_ACTION)) {
+        if (action.equals(ENCRYPT_ACTION)) {
             try {
-                encrypt( args.getString(0), callbackContext );
+                encrypt(args.getString(0), callbackContext);
             } catch (Exception e) {
                 callbackContext.error(e.getMessage());
             }
             return true;
         }
-        if( action.equals(DECRYPT_ACTION)) {
+        if (action.equals(DECRYPT_ACTION)) {
             try {
-                decrypt( args.getString(0), callbackContext );
+                decrypt(args.getString(0), callbackContext);
             } catch (Exception e) {
                 callbackContext.error(e.getMessage());
             }
             return true;
         }
-        if( action.equals(VIEW_ENCRYPTED_IMAGE_ACTION)) {
+        if (action.equals(VIEW_ENCRYPTED_IMAGE_ACTION)) {
             try {
-                viewEncryptedImage( args.getString(0), callbackContext );
+                viewEncryptedImage(args.getString(0), callbackContext);
             } catch (Exception e) {
                 callbackContext.error(e.getMessage());
             }
@@ -245,7 +263,7 @@ public class FileEncryption extends CordovaPlugin {
     }
 
     public interface DecryptCallback {
-        public void onSuccess(InputStream is);
-        public void onFailure();
+        void onSuccess(InputStream is);
+        void onFailure();
     }
 }
