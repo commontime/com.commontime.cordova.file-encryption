@@ -8,6 +8,9 @@ module.exports = {
     },
     viewEncryptedImage: function (successCallback, errorCallback, path) {
         cordova.exec(successCallback, errorCallback, 'FileEncryption', 'viewEncryptedImage', [path]);
-    }
+    },
+    getFileSize: function (successCallback, errorCallback, path) {
+ 		cordova.exec(successCallback, errorCallback, 'FileEncryption', 'getFileSize', [path]);
+ 	}
 }
 

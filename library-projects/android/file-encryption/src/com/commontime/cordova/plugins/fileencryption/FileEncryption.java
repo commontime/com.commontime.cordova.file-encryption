@@ -19,6 +19,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaResourceApi;
+import org.apache.cordova.CordovaWebView;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -33,18 +34,19 @@ import java.io.OutputStream;
 
 public class FileEncryption extends CordovaPlugin {
 
-    private static final String TAG = "FileEncryption";
-
     private static final String ENCRYPTED_SUFFIX = ".encrypted";
     private static final String ENCRYPT_ACTION = "encrypt";
     private static final String ENTITY_ID = "entity_id";
     private static final String DECRYPT_ACTION = "decrypt";
+    private static final String GET_FILE_SIZE_ACTION = "getFileSize";
     private static final String VIEW_ENCRYPTED_IMAGE_ACTION = "viewEncryptedImage";
     private static final String USE_KEYSTORE = "usekeystore";
 
     private static final String ENCRYPT_FILE_MESSAGE_ID = "ENCRYPT_FILE";
-    private static final String ENCRYPT_FILE_URI_KEY = "uri";
-    private static final String ENCRYPT_FILE_CALLBACK_KEY = "cb";
+    private static final String DECRYPT_FILE_MESSAGE_ID = "DECRYPT_FILE";
+    private static final String ENCRYPT_DECRYPT_FILE_URI_KEY = "uri";
+    private static final String ENCRYPT_DECRYPT_FILE_CALLBACK_KEY = "cb";
+    private static final String DECRYPT_TARGET_KEY = "target";
 
     private KeyChain keyChain;
     private static Crypto crypto;
@@ -68,7 +70,14 @@ public class FileEncryption extends CordovaPlugin {
         if (id.equals(ENCRYPT_FILE_MESSAGE_ID)) {
             try {
                 JSONObject dataJson = (JSONObject)data;
-                encrypt(dataJson.getString(ENCRYPT_FILE_URI_KEY), (CallbackContext)dataJson.get(ENCRYPT_FILE_CALLBACK_KEY));
+                encrypt(dataJson.getString(ENCRYPT_DECRYPT_FILE_URI_KEY), new CustomCallbackContext(dataJson.getString(ENCRYPT_DECRYPT_FILE_CALLBACK_KEY), null));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else if (id.equals(DECRYPT_FILE_MESSAGE_ID)) {
+            try {
+                JSONObject dataJson = (JSONObject)data;
+                decrypt(dataJson.getString(ENCRYPT_DECRYPT_FILE_URI_KEY), dataJson.getString(DECRYPT_TARGET_KEY), new CustomCallbackContext(dataJson.getString(ENCRYPT_DECRYPT_FILE_CALLBACK_KEY), null));
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -93,7 +102,7 @@ public class FileEncryption extends CordovaPlugin {
         }
         if (action.equals(DECRYPT_ACTION)) {
             try {
-                decrypt(args.getString(0), callbackContext);
+                decrypt(args.getString(0), null, callbackContext);
             } catch (Exception e) {
                 callbackContext.error(e.getMessage());
             }
@@ -107,11 +116,20 @@ public class FileEncryption extends CordovaPlugin {
             }
             return true;
         }
+        if (action.equals(GET_FILE_SIZE_ACTION)) {
+            try {
+                getFileSize(args.getString(0), callbackContext);
+            } catch (Exception e) {
+                callbackContext.error(e.getMessage());
+            }
+            return true;
+        }
+
 
         return false;
     }
 
-    private void decrypt(final String uri, final CallbackContext callbackContext) {
+    private void decrypt(final String uri, final String target, final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             @Override
             public void run() {
@@ -131,7 +149,7 @@ public class FileEncryption extends CordovaPlugin {
                     InputStream fis = null;
                     fis = crypto.getCipherInputStream( fileStream, Entity.create(ENTITY_ID));
 
-                    final File decryptedFile = new File(fileToDecrypt.getParent(), decryptedName);
+                    final File decryptedFile = new File(target != null ? target : fileToDecrypt.getParent(), decryptedName);
                     OutputStream fos = new BufferedOutputStream(new FileOutputStream(decryptedFile));
 
                     IOUtils.copy(fis, fos);
@@ -140,19 +158,25 @@ public class FileEncryption extends CordovaPlugin {
                     fis.close();
                     fos.close();
 
-                    fileToDecrypt.delete();
+                    if (target == null) {
+                        fileToDecrypt.delete();
+                    }
 
-                    callbackContext.success(decryptedFile.toURI().toString());
+                    if (callbackContext instanceof CustomCallbackContext) {
+                        JSONObject data = new JSONObject();
+                        data.put(ENCRYPT_DECRYPT_FILE_URI_KEY, decryptedFile.toURI().toString());
+                        webView.getPluginManager().postMessage(callbackContext.getCallbackId(), data);
+                    } else {
+                        callbackContext.success(decryptedFile.toURI().toString());
+                    }
                     return;
-                } catch (IOException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
-                    callbackContext.error(e.getMessage());
-                } catch (CryptoInitializationException e) {
-                    e.printStackTrace();
-                    callbackContext.error(e.getMessage());
-                } catch (KeyChainException e) {
-                    e.printStackTrace();
-                    callbackContext.error(e.getMessage());
+                    if (callbackContext instanceof CustomCallbackContext) {
+                        webView.getPluginManager().postMessage(callbackContext.getCallbackId(), null);
+                    } else {
+                        callbackContext.error(e.getMessage());
+                    }
                 }
                 return;
             }
@@ -189,7 +213,57 @@ public class FileEncryption extends CordovaPlugin {
 
                     fileToEncrypt.delete();
 
-                    callbackContext.success(encryptedFile.toURI().toString());
+                    if (callbackContext instanceof CustomCallbackContext) {
+                        JSONObject data = new JSONObject();
+                        data.put(ENCRYPT_DECRYPT_FILE_URI_KEY, encryptedFile.toURI().toString());
+                        webView.getPluginManager().postMessage(callbackContext.getCallbackId(), data);
+                    } else {
+                        callbackContext.success(encryptedFile.toURI().toString());
+                    }
+                    return;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    if (callbackContext instanceof CustomCallbackContext) {
+                        webView.getPluginManager().postMessage(callbackContext.getCallbackId(), null);
+                    } else {
+                        callbackContext.error(e.getMessage());
+                    }
+                }
+            }
+        });
+    }
+
+    private void getFileSize(final String uri, final CallbackContext callbackContext) {
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (!crypto.isAvailable()) {
+                        callbackContext.error("Crypto library not available");
+                        return;
+                    }
+
+                    final Uri parsed = Uri.parse(uri);
+                    final File fileToDecrypt = webView.getResourceApi().mapUriToFile(parsed);
+                    final String name = parsed.getLastPathSegment();
+                    final String decryptedName = name.substring(0, name.length() - ENCRYPTED_SUFFIX.length() );
+
+                    FileInputStream fileStream = new FileInputStream(fileToDecrypt);
+
+                    InputStream fis = null;
+                    fis = crypto.getCipherInputStream( fileStream, Entity.create(ENTITY_ID));
+
+                    long size = 0;
+                    int chunk = 0;
+                    long start = 0;
+                    byte[] buffer = new byte[1024];
+                    while((chunk = fis.read(buffer)) != -1){
+                        size += chunk;
+                    }
+
+                    fis.close();
+
+                    callbackContext.success(String.valueOf(size));
                     return;
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -201,6 +275,7 @@ public class FileEncryption extends CordovaPlugin {
                     e.printStackTrace();
                     callbackContext.error(e.getMessage());
                 }
+                return;
             }
         });
     }
@@ -265,5 +340,11 @@ public class FileEncryption extends CordovaPlugin {
     public interface DecryptCallback {
         void onSuccess(InputStream is);
         void onFailure();
+    }
+
+    private class CustomCallbackContext extends CallbackContext {
+        public CustomCallbackContext(String callbackId, CordovaWebView webView) {
+            super(callbackId, webView);
+        }
     }
 }
