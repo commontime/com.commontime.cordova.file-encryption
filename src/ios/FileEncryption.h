@@ -6,3 +6,6 @@
 - (void)decrypt:(CDVInvokedUrlCommand*)command;
 
 @end
+
+@interface CustomCDVInvokedUrlCommand : CDVInvokedUrlCommand
+@end
