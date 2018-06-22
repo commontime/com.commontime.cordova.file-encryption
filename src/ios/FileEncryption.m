@@ -11,7 +11,8 @@ NSString* const ENCRYPT_FILE_MESSAGE_ID = @"ENCRYPT_FILE";
 
 - (void)encryptFileNotification:(NSNotification *)notification
 {
-    [self encrypt:notification.object];
+    CustomCDVInvokedUrlCommand *newCommand = [[CustomCDVInvokedUrlCommand alloc] initWithArguments:notification.object callbackId:nil className:nil methodName:nil];
+    [self encrypt:newCommand];
 }
 
 - (void)encrypt:(CDVInvokedUrlCommand*)command
@@ -23,13 +24,17 @@ NSString* const ENCRYPT_FILE_MESSAGE_ID = @"ENCRYPT_FILE";
     if (path != nil) {
         pluginResult =
         [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                          messageAsString:path];
+                  messageAsString:path];
     } else {
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
     }
     
-    [self.commandDelegate sendPluginResult:pluginResult
+    if ([command isKindOfClass:[CustomCDVInvokedUrlCommand class]]) {
+        [[NSNotificationCenter defaultCenter] postNotificationName:[command.arguments objectAtIndex:1] object:path];
+    } else {
+        [self.commandDelegate sendPluginResult:pluginResult
                                 callbackId:command.callbackId];
+    }
 }
 
 - (void)decrypt:(CDVInvokedUrlCommand *)command {
@@ -41,7 +46,7 @@ NSString* const ENCRYPT_FILE_MESSAGE_ID = @"ENCRYPT_FILE";
     if (path != nil) {
         pluginResult =
         [CDVPluginResult resultWithStatus:CDVCommandStatus_OK
-                          messageAsString:path];
+                  messageAsString:path];
     } else {
         pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
     }
@@ -80,4 +85,7 @@ NSString* const ENCRYPT_FILE_MESSAGE_ID = @"ENCRYPT_FILE";
     return nil;
 }
 
+@end
+
+@implementation CustomCDVInvokedUrlCommand
 @end
