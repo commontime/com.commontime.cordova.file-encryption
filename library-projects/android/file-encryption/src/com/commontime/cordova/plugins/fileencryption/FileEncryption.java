@@ -2,6 +2,7 @@ package com.commontime.cordova.plugins.fileencryption;
 
 import android.content.Intent;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.webkit.MimeTypeMap;
 
@@ -246,7 +247,6 @@ public class FileEncryption extends CordovaPlugin {
                     final Uri parsed = Uri.parse(uri);
                     final File fileToDecrypt = webView.getResourceApi().mapUriToFile(parsed);
                     final String name = parsed.getLastPathSegment();
-                    final String decryptedName = name.substring(0, name.length() - ENCRYPTED_SUFFIX.length() );
 
                     FileInputStream fileStream = new FileInputStream(fileToDecrypt);
 
@@ -255,7 +255,6 @@ public class FileEncryption extends CordovaPlugin {
 
                     long size = 0;
                     int chunk = 0;
-                    long start = 0;
                     byte[] buffer = new byte[1024];
                     while((chunk = fis.read(buffer)) != -1){
                         size += chunk;
@@ -324,21 +323,12 @@ public class FileEncryption extends CordovaPlugin {
         }
     }
 
-    public void decrypt(final String path, final DecryptCallback callback) {
-        try {
-            final Uri uri = Uri.parse(path);
-            final File fileToDecrypt = new File(uri.getPath());
-            final FileInputStream fis = new FileInputStream(fileToDecrypt);
-            InputStream inputStream = crypto.getCipherInputStream( fis, Entity.create(ENTITY_ID));
-            callback.onSuccess(inputStream);
-        } catch (Exception e) {
-            e.printStackTrace();
-            callback.onFailure();
-        }
+    public void decrypt(String path, String target, DecryptCallback callback) {
+        new DecryptAsyncOperation(path, target, callback).execute();
     }
 
     public interface DecryptCallback {
-        void onSuccess(InputStream is);
+        void onSuccess(String path);
         void onFailure();
     }
 
@@ -346,5 +336,62 @@ public class FileEncryption extends CordovaPlugin {
         public CustomCallbackContext(String callbackId, CordovaWebView webView) {
             super(callbackId, webView);
         }
+    }
+
+    private class DecryptAsyncOperation extends AsyncTask<String, Void, String> {
+
+        private DecryptCallback callback;
+        private String path;
+        private String target;
+
+        public DecryptAsyncOperation(String path, String target, DecryptCallback callback) {
+            this.callback = callback;
+            this.path = path;
+            this.target = target;
+        }
+
+        @Override
+        protected String doInBackground(String... params) {
+            try {
+                final Uri uri = Uri.parse(path);
+                final File fileToDecrypt = new File(uri.getPath());
+                final String name = uri.getLastPathSegment();
+                final String decryptedName = name.substring(0, name.length() - ENCRYPTED_SUFFIX.length());
+
+                FileInputStream fileStream = new FileInputStream(fileToDecrypt);
+
+                InputStream fis = null;
+                fis = crypto.getCipherInputStream( fileStream, Entity.create(ENTITY_ID));
+
+                final File decryptedFile = new File(target, decryptedName);
+                OutputStream fos = new BufferedOutputStream(new FileOutputStream(decryptedFile));
+
+                IOUtils.copy(fis, fos);
+
+                fileStream.close();
+                fis.close();
+                fos.close();
+
+                return decryptedFile.getPath();
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String path) {
+            if (path == null) {
+                callback.onFailure();
+            } else {
+                callback.onSuccess(path);
+            }
+        }
+
+        @Override
+        protected void onPreExecute() {}
+
+        @Override
+        protected void onProgressUpdate(Void... values) {}
     }
 }

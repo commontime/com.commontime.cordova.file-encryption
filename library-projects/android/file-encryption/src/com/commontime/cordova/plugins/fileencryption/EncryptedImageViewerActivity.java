@@ -25,14 +25,23 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.Window;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
-import java.io.InputStream;
+import java.io.File;
 
 public class EncryptedImageViewerActivity extends Activity
 {
+    private static final String LOG_TAG = "EncryptedImageViewer";
+    private static final String UNABLE_TO_LOAD_IMAGE = "Unable to load image.";
+
     Bitmap bmp = null;
 
     @Override
@@ -46,39 +55,17 @@ public class EncryptedImageViewerActivity extends Activity
         actionBar.setStackedBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         actionBar.setDisplayHomeAsUpEnabled(true);
 
+        setContentView(createInitialView());
+
         final String path = getIntent().getStringExtra("path");
         final FileEncryption fe = new FileEncryption();
-        fe.decrypt(path, new FileEncryption.DecryptCallback() {
+        fe.decrypt(path, getCacheDir().getAbsolutePath(), new FileEncryption.DecryptCallback() {
             @Override
-            public void onSuccess(InputStream is) {
-                if(is != null) {
-                    BitmapFactory.Options options = new BitmapFactory.Options();
-                    options.inJustDecodeBounds = true;
-                    BitmapFactory.decodeStream(is, null, options);
-                    final int inSampleSize = calculateInSampleSize(options, 1500, 1500);
-                    fe.decrypt(path, new FileEncryption.DecryptCallback() {
-                        @Override
-                        public void onSuccess(InputStream is) {
-                            if(is != null) {
-                                BitmapFactory.Options options = new BitmapFactory.Options();
-                                options.inJustDecodeBounds = false;
-                                options.inSampleSize = inSampleSize;
-                                bmp = BitmapFactory.decodeStream(is, null, options);
-                                ZoomFunctionality img = new ZoomFunctionality(EncryptedImageViewerActivity.this);
-                                img.setImageBitmap(bmp);
-                                img.setMaxZoom(4f);
-                                setContentView(img);
-                            } else {
-                                finish();
-                            }
-                        }
-                        @Override
-                        public void onFailure() {
-                            finish();
-                        }
-                    });
+            public void onSuccess(String path) {
+                if(path != null) {
+                    new GetAndShowBitmapAsyncOperation(path).execute();
                 } else {
-                    finish();
+                    setContentView(createImageLoadErrorView());
                 }
             }
             @Override
@@ -106,7 +93,7 @@ public class EncryptedImageViewerActivity extends Activity
         super.onDestroy();
     }
 
-    public int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight)
+    private int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight)
     {
         // Raw height and width of image
         final int height = options.outHeight;
@@ -127,5 +114,119 @@ public class EncryptedImageViewerActivity extends Activity
         }
 
         return inSampleSize;
+    }
+
+    private View createInitialView()
+    {
+        RelativeLayout rl = new RelativeLayout(getApplicationContext());
+
+        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                RelativeLayout.LayoutParams.MATCH_PARENT
+        );
+
+        rl.setLayoutParams(lp);
+
+        ProgressBar pb = new ProgressBar(getApplicationContext());
+
+        RelativeLayout.LayoutParams lp_tv = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                RelativeLayout.LayoutParams.WRAP_CONTENT
+        );
+
+        lp_tv.addRule(RelativeLayout.CENTER_IN_PARENT);
+
+        pb.setLayoutParams(lp_tv);
+
+        rl.addView(pb);
+
+        return rl;
+    }
+
+    private View createImageLoadErrorView()
+    {
+        RelativeLayout rl = new RelativeLayout(getApplicationContext());
+
+        RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                RelativeLayout.LayoutParams.MATCH_PARENT
+        );
+
+        rl.setLayoutParams(lp);
+
+        TextView tv = new TextView(getApplicationContext());
+
+        RelativeLayout.LayoutParams lp_tv = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                RelativeLayout.LayoutParams.WRAP_CONTENT
+        );
+
+        lp_tv.addRule(RelativeLayout.CENTER_IN_PARENT);
+
+        tv.setLayoutParams(lp_tv);
+
+        tv.setText(UNABLE_TO_LOAD_IMAGE);
+
+        tv.setPadding(15,15,15,15);
+
+        tv.setTextColor(Color.WHITE);
+
+        tv.setTextSize(15);
+
+        rl.addView(tv);
+
+        return rl;
+    }
+
+    private class GetAndShowBitmapAsyncOperation extends AsyncTask<String, Void, Bitmap>
+    {
+        String path;
+
+        public GetAndShowBitmapAsyncOperation(String path) {
+            this.path = path;
+        }
+
+        @Override
+        protected Bitmap doInBackground(String... params) {
+            try {
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inJustDecodeBounds = true;
+                BitmapFactory.decodeFile(path, options);
+                int inSampleSize = calculateInSampleSize(options, 1500, 1500);
+                BitmapFactory.Options newOptions = new BitmapFactory.Options();
+                newOptions.inJustDecodeBounds = false;
+                newOptions.inSampleSize = inSampleSize;
+                newOptions.inMutable = true;
+                bmp = BitmapFactory.decodeFile(path, newOptions);
+            } catch (Exception e) {
+            }
+            return bmp;
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap bmp) {
+            if (bmp != null) {
+                ZoomFunctionality img = new ZoomFunctionality(EncryptedImageViewerActivity.this);
+                img.setImageBitmap(bmp);
+                img.setMaxZoom(4f);
+                setContentView(img);
+            } else {
+                setContentView(createImageLoadErrorView());
+            }
+            File fdelete = new File(path);
+            if (fdelete.exists()) {
+                if (fdelete.delete()) {
+                    Log.d(LOG_TAG, "file Deleted : " + path);
+                } else {
+                    Log.d(LOG_TAG, "file not Deleted : " + path);
+                }
+            }
+        }
+
+        @Override
+        protected void onPreExecute() {}
+
+        @Override
+        protected void onProgressUpdate(Void... values) {}
     }
 }
