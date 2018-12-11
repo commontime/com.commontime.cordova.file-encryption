@@ -7,7 +7,7 @@ dependencies {
     compile('com.facebook.conceal:conceal:2.0.2@aar') {
         transitive = true
     }
-    compile 'commons-io:commons-io:2.4'
+    // compile 'commons-io:commons-io:2.4' 
 }
 
 android {
