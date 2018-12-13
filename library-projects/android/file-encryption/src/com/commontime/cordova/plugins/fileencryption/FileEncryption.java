@@ -45,6 +45,7 @@ public class FileEncryption extends CordovaPlugin {
 
     private static final String ENCRYPT_FILE_MESSAGE_ID = "ENCRYPT_FILE";
     private static final String DECRYPT_FILE_MESSAGE_ID = "DECRYPT_FILE";
+    private static final String ENCRYPT_DECRYPT_FILE_ORIGINAL_URI_KEY = "originalUri";
     private static final String ENCRYPT_DECRYPT_FILE_URI_KEY = "uri";
     private static final String ENCRYPT_DECRYPT_FILE_CALLBACK_KEY = "cb";
     private static final String DECRYPT_TARGET_KEY = "target";
@@ -165,6 +166,7 @@ public class FileEncryption extends CordovaPlugin {
 
                     if (callbackContext instanceof CustomCallbackContext) {
                         JSONObject data = new JSONObject();
+                        data.put(ENCRYPT_DECRYPT_FILE_ORIGINAL_URI_KEY, uri);
                         data.put(ENCRYPT_DECRYPT_FILE_URI_KEY, decryptedFile.toURI().toString());
                         webView.getPluginManager().postMessage(callbackContext.getCallbackId(), data);
                     } else {
