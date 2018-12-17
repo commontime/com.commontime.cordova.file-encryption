@@ -48,6 +48,7 @@ public class FileEncryption extends CordovaPlugin {
     private static final String ENCRYPT_DECRYPT_FILE_ORIGINAL_URI_KEY = "originalUri";
     private static final String ENCRYPT_DECRYPT_FILE_URI_KEY = "uri";
     private static final String ENCRYPT_DECRYPT_FILE_CALLBACK_KEY = "cb";
+    private static final String ENCRYPT_DECRYPT_REQUEST_ID_KEY = "encryptDecryptRequestId";
     private static final String DECRYPT_TARGET_KEY = "target";
 
     private KeyChain keyChain;
@@ -72,14 +73,14 @@ public class FileEncryption extends CordovaPlugin {
         if (id.equals(ENCRYPT_FILE_MESSAGE_ID)) {
             try {
                 JSONObject dataJson = (JSONObject)data;
-                encrypt(dataJson.getString(ENCRYPT_DECRYPT_FILE_URI_KEY), new CustomCallbackContext(dataJson.getString(ENCRYPT_DECRYPT_FILE_CALLBACK_KEY), null));
+                encrypt(dataJson.getString(ENCRYPT_DECRYPT_FILE_URI_KEY), new CustomCallbackContext(dataJson.getString(ENCRYPT_DECRYPT_REQUEST_ID_KEY), dataJson.getString(ENCRYPT_DECRYPT_FILE_CALLBACK_KEY)));
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         } else if (id.equals(DECRYPT_FILE_MESSAGE_ID)) {
             try {
                 JSONObject dataJson = (JSONObject)data;
-                decrypt(dataJson.getString(ENCRYPT_DECRYPT_FILE_URI_KEY), dataJson.getString(DECRYPT_TARGET_KEY), new CustomCallbackContext(dataJson.getString(ENCRYPT_DECRYPT_FILE_CALLBACK_KEY), null));
+                decrypt(dataJson.getString(ENCRYPT_DECRYPT_FILE_URI_KEY), dataJson.getString(DECRYPT_TARGET_KEY), new CustomCallbackContext(dataJson.getString(ENCRYPT_DECRYPT_REQUEST_ID_KEY), dataJson.getString(ENCRYPT_DECRYPT_FILE_CALLBACK_KEY)));
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -168,7 +169,8 @@ public class FileEncryption extends CordovaPlugin {
                         JSONObject data = new JSONObject();
                         data.put(ENCRYPT_DECRYPT_FILE_ORIGINAL_URI_KEY, uri);
                         data.put(ENCRYPT_DECRYPT_FILE_URI_KEY, decryptedFile.toURI().toString());
-                        webView.getPluginManager().postMessage(callbackContext.getCallbackId(), data);
+                        data.put(ENCRYPT_DECRYPT_REQUEST_ID_KEY, ((CustomCallbackContext) callbackContext).getRequestId());
+                        webView.getPluginManager().postMessage(((CustomCallbackContext) callbackContext).getCallbackKey(), data);
                     } else {
                         callbackContext.success(decryptedFile.toURI().toString());
                     }
@@ -176,7 +178,7 @@ public class FileEncryption extends CordovaPlugin {
                 } catch (Exception e) {
                     e.printStackTrace();
                     if (callbackContext instanceof CustomCallbackContext) {
-                        webView.getPluginManager().postMessage(callbackContext.getCallbackId(), null);
+                        webView.getPluginManager().postMessage(((CustomCallbackContext) callbackContext).getCallbackKey(), null);
                     } else {
                         callbackContext.error(e.getMessage());
                     }
@@ -335,8 +337,21 @@ public class FileEncryption extends CordovaPlugin {
     }
 
     private class CustomCallbackContext extends CallbackContext {
-        public CustomCallbackContext(String callbackId, CordovaWebView webView) {
-            super(callbackId, webView);
+        private String requestId;
+        private String callbackKey;
+
+        public CustomCallbackContext(String requestId, String callbackKey) {
+            super(null, null);
+            this.requestId = requestId;
+            this.callbackKey = callbackKey;
+        }
+
+        public String getRequestId() {
+            return requestId;
+        }
+
+        public String getCallbackKey() {
+            return callbackKey;
         }
     }
 
