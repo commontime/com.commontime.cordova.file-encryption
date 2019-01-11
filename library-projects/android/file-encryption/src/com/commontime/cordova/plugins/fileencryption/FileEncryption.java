@@ -221,7 +221,8 @@ public class FileEncryption extends CordovaPlugin {
                     if (callbackContext instanceof CustomCallbackContext) {
                         JSONObject data = new JSONObject();
                         data.put(ENCRYPT_DECRYPT_FILE_URI_KEY, encryptedFile.toURI().toString());
-                        webView.getPluginManager().postMessage(callbackContext.getCallbackId(), data);
+                        data.put(ENCRYPT_DECRYPT_REQUEST_ID_KEY, ((CustomCallbackContext) callbackContext).getRequestId());
+                        webView.getPluginManager().postMessage(((CustomCallbackContext) callbackContext).getCallbackKey(), data);
                     } else {
                         callbackContext.success(encryptedFile.toURI().toString());
                     }
@@ -229,7 +230,7 @@ public class FileEncryption extends CordovaPlugin {
                 } catch (Exception e) {
                     e.printStackTrace();
                     if (callbackContext instanceof CustomCallbackContext) {
-                        webView.getPluginManager().postMessage(callbackContext.getCallbackId(), null);
+                        webView.getPluginManager().postMessage(((CustomCallbackContext) callbackContext).getCallbackKey(), null);
                     } else {
                         callbackContext.error(e.getMessage());
                     }
