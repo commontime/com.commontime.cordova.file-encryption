@@ -25,6 +25,15 @@
     </config-file>    
       
     <framework src="src/android/conceal.gradle" custom="true" type="gradleReference" />
+    
+    <config-file target="AndroidManifest.xml" parent="/manifest/application">
+    	  <activity android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale" 
+                  android:label="" android:launchMode="singleTop" 
+                  android:name="com.commontime.cordova.plugins.fileencryption.EncryptedImageViewerActivity" 
+                  android:theme="@style/CustomActionBarTheme" 
+                  android:windowSoftInputMode="adjustResize">
+        </activity>
+    </application>
 
   </platform>
 
