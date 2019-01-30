@@ -33,7 +33,7 @@
                   android:theme="@style/CustomActionBarTheme" 
                   android:windowSoftInputMode="adjustResize">
         </activity>
-    </application>
+    </config-file>
 
   </platform>
 
