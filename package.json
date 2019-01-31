@@ -1,6 +1,6 @@
 {
   "name": "com.commontime.cordova.file-encryption",
-  "version": "0.0.14",
+  "version": "0.0.16",
   "description": "Commontime cordova encryption plugin.",
   "cordova": {
     "id": "com.commontime.cordova.file-encryption",
