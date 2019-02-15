@@ -1,6 +1,7 @@
 package com.commontime.cordova.plugins.fileencryption;
 
 import android.content.Intent;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -20,7 +21,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaResourceApi;
-import org.apache.cordova.CordovaWebView;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -40,6 +40,7 @@ public class FileEncryption extends CordovaPlugin {
     private static final String ENTITY_ID = "entity_id";
     private static final String DECRYPT_ACTION = "decrypt";
     private static final String GET_FILE_SIZE_ACTION = "getFileSize";
+    private static final String GET_AUDIO_FILE_DURATION_ACTION = "getAudioFileDuration";
     private static final String VIEW_ENCRYPTED_IMAGE_ACTION = "viewEncryptedImage";
     private static final String USE_KEYSTORE = "usekeystore";
 
@@ -122,6 +123,14 @@ public class FileEncryption extends CordovaPlugin {
         if (action.equals(GET_FILE_SIZE_ACTION)) {
             try {
                 getFileSize(args.getString(0), callbackContext);
+            } catch (Exception e) {
+                callbackContext.error(e.getMessage());
+            }
+            return true;
+        }
+        if (action.equals(GET_AUDIO_FILE_DURATION_ACTION)) {
+            try {
+                getAudioFileDuration(args.getString(0), callbackContext);
             } catch (Exception e) {
                 callbackContext.error(e.getMessage());
             }
@@ -255,8 +264,7 @@ public class FileEncryption extends CordovaPlugin {
 
                     FileInputStream fileStream = new FileInputStream(fileToDecrypt);
 
-                    InputStream fis = null;
-                    fis = crypto.getCipherInputStream( fileStream, Entity.create(ENTITY_ID));
+                    InputStream  fis = crypto.getCipherInputStream( fileStream, Entity.create(ENTITY_ID));
 
                     long size = 0;
                     int chunk = 0;
@@ -273,6 +281,61 @@ public class FileEncryption extends CordovaPlugin {
                     e.printStackTrace();
                     callbackContext.error(e.getMessage());
                 } catch (CryptoInitializationException e) {
+                    e.printStackTrace();
+                    callbackContext.error(e.getMessage());
+                } catch (KeyChainException e) {
+                    e.printStackTrace();
+                    callbackContext.error(e.getMessage());
+                }
+                return;
+            }
+        });
+    }
+
+    private void getAudioFileDuration(final String uri, final CallbackContext callbackContext) {
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (!crypto.isAvailable()) {
+                        callbackContext.error("Crypto library not available");
+                        return;
+                    }
+
+                    final Uri parsed = Uri.parse(uri);
+                    final File fileToDecrypt = webView.getResourceApi().mapUriToFile(parsed);
+                    final String name = parsed.getLastPathSegment();
+                    final String decryptedName = name.substring(0, name.length() - ENCRYPTED_SUFFIX.length() );
+
+                    FileInputStream fileStream = new FileInputStream(fileToDecrypt);
+
+                    InputStream fis = crypto.getCipherInputStream( fileStream, Entity.create(ENTITY_ID));
+
+                    final File decryptedFile = new File(fileToDecrypt.getParent(), decryptedName);
+                    OutputStream fos = new BufferedOutputStream(new FileOutputStream(decryptedFile));
+
+                    IOUtils.copy(fis, fos);
+
+                    fileStream.close();
+                    fis.close();
+                    fos.close();
+
+                    FileInputStream fileInputStreamB = new FileInputStream(decryptedFile);
+
+                    MediaPlayer player = new MediaPlayer();
+                    player.setDataSource(fileInputStreamB.getFD());
+                    player.prepare();
+                    float duration = (player.getDuration() / 1000.0f);
+                    player.release();
+
+                    decryptedFile.delete();
+
+                    callbackContext.success(String.valueOf(duration));
+                    return;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    callbackContext.error(e.getMessage());
+                }  catch (CryptoInitializationException e) {
                     e.printStackTrace();
                     callbackContext.error(e.getMessage());
                 } catch (KeyChainException e) {

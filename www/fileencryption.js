@@ -11,6 +11,9 @@ module.exports = {
     },
     getFileSize: function (successCallback, errorCallback, path) {
  		cordova.exec(successCallback, errorCallback, 'FileEncryption', 'getFileSize', [path]);
- 	}
+ 	},
+    getAudioFileDuration: function (successCallback, errorCallback, path) {
+        cordova.exec(successCallback, errorCallback, 'FileEncryption', 'getAudioFileDuration', [path]);
+    }
 }
 
