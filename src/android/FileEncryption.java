@@ -151,10 +151,13 @@ public class FileEncryption extends CordovaPlugin {
                         return;
                     }
 
-                    final Uri parsed = Uri.parse(uri);
-                    final File fileToDecrypt = webView.getResourceApi().mapUriToFile(parsed);
+                    final Uri parsed = uri.endsWith("!") ? Uri.parse(uri.substring(0, uri.length()-1)) : Uri.parse(uri);
+                    File fileToDecrypt = webView.getResourceApi().mapUriToFile(parsed);
                     final String name = parsed.getLastPathSegment();
-                    final String decryptedName = name.substring(0, name.length() - ENCRYPTED_SUFFIX.length() );
+                    String decryptedName = name.substring(0, name.length() - ENCRYPTED_SUFFIX.length());
+                    if(uri.endsWith("!")) {
+                        decryptedName = "decrypted.file";
+                    }
 
                     FileInputStream fileStream = new FileInputStream(fileToDecrypt);
 
